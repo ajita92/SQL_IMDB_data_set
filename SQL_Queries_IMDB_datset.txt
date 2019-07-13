@@ -1,0 +1,158 @@
+------------------1----------------------
+SELECT ((SELECT count(*) FROM movieDirectors )::real /( SELECT count(*) FROM directors))::numeric(16,6) ; 
+------------------2-----------------
+SELECT count(U.userid) from (SELECT distinct ratings.userid FROM ratings,userprofile where ratings.userid=userprofile.userid and country='India') as U; 
+------------------------------------------3--------------------------------------------
+select round(avg(age)::numeric, 3) as average from ratings,userProfile where ratings.userid=userProfile.userId;
+
+------------------------------------------4--------------------------------------------
+
+select fname,lname from actor,movie,casts where actor.id=casts.pid and movie.id=casts.mid and name='Officer 444' order by fname,lname;
+
+------------------------------------------5----------------------------------------------
+
+select distinct fname,lname from movie,directors,movieDirectors,genre where genre.mid = movie.id and movie.id=movieDirectors.mid and directors.id=movieDirectors.did and genre='Film-Noir' and (cast(to_char(year, 'YYYY') as int)%4=0) and ((cast(to_char(year, 'YYYY') as int)%100 <> 0) or (cast(to_char(year, 'YYYY') as int)%400 = 0)) order by fname,lname;
+
+--------------------------6------------------------------------
+select distinct fname,lname from actor,movie,casts where actor.id=casts.pid and casts.mid=movie.id and (cast(to_char(year, 'YYYY') as int))>=1990 and (cast(to_char(year, 'YYYY') as int))<=2000 order by fname,lname;
+
+-----------------------------7--------------------
+select distinct userid from userProfile T where userid not in(select distinct ratings.userid from ratings);
+
+------------------------------8-----------------------------
+select distinct userid,registered from userProfile where (cast(to_char(registered, 'YYYY') as int)>2006) or (cast(to_char(registered, 'YYYY') as int)=2006 and cast(to_char(registered, 'MM') as int)>1) or (cast(to_char(registered, 'YYYY') as int)=2006 and cast(to_char(registered, 'MM') as int)=1 and cast(to_char(registered, 'DD') as int)>1);
+
+
+-----------------------9----------------------------------
+select distinct fname,T.val from directors, (select did,count(*) val from movieDirectors group by did) as T where directors.id = T.did and T.val>=500 order by T.val desc;
+
+---------------------10-------------------------------
+select name,T.val from movie,(select mid,count(*) val from casts group by mid) as T where movie.id=T.mid order by T.val desc,name asc;
+
+-----------------------11-----------------------
+select fname,round(numberFemale/cast(numberMale as float)::numeric, 6) from directors D1, (select did,numberFemale from (select did,count(*) numberFemale from casts,movieDirectors,actor where casts.pid=actor.id and movieDirectors.mid=casts.mid and actor.gender='F' group by did) as Ttemp1) as T1, (select did,numberMale from(select did,count(*) numberMale from casts,movieDirectors,actor where casts.pid=actor.id and movieDirectors.mid=casts.mid and actor.gender='M' group by did )as Ttemp2) as T2 where D1.id=T1.did and T1.did=T2.did;
+
+
+------------------12--------------------------
+select (actor.fname,actor.lname) as Actor_Name,genre from (select query12Temp1.pid,genre,count3 from (select pid,genre,count(*) as count3 from (select distinct pid,mid from casts) as casts1,genre where casts1.mid =genre.mid group by pid,genre order by pid ) as query12Temp1,(select pid,max(count1) as count2 from (select pid,genre,count(*) as count1 from (select distinct pid,mid from casts) as casts2,genre where casts2.mid=genre.mid group by pid,genre order by pid ) as query12Temp2 group by pid) as  query12Temp3 where query12Temp1.count3=query12Temp3.count2 AND query12Temp1.pid = query12Temp3.pid)as qw,actor where actor.id=qw.pid order by(actor.fname,actor.lname);
+
+
+----------------13-------------------------------
+select name,round(numberFemale/cast(numberMale as float)::numeric, 6) from movie M1, (select mid,numberFemale from (select mid,count(*) numberFemale from casts,movie,actor where casts.pid=actor.id and movie.id=casts.mid and actor.gender='F' group by mid) as Ttemp1) as T1, (select mid,numberMale from (select mid,count(*) numberMale from casts,movie,actor where casts.pid=actor.id and movie.id=casts.mid and actor.gender='M' group by mid) as Ttemp2) as T2 where M1.id=T1.mid and T1.mid=T2.mid;
+
+
+
+-----------------------------14------------------------------
+select name from (select distinct name,rating from movie,ratings where cast(to_char(year, 'YYYY') as int)>=1990 and cast(to_char(year, 'YYYY') as int)<=2000 and movie.id=ratings.mid order by rating desc,name asc limit 10) as T;
+
+
+---------------------------------15------------
+
+with T as (select distinct ratings.userid,ratings.mid,avg(rating) avgr from userProfile,ratings where userProfile.userid=ratings.userid and age>=13 and age<=21 group by ratings.userid,ratings.mid )
+
+select distinct name from movie M1 , (select T1.mid from T T1 where T1.avgr = (select max(T2.avgr) from T T2 where T1.userid = T2.userid)) as M2 where M1.id = M2.mid order by name;
+
+--------------------------16--------------------------
+select country,count(*) val from userProfile,ratings where userProfile.userid=ratings.userid group by country order by val desc,country asc limit 5;
+
+----------------------------17--------------------------
+select round(numberFemale/cast(numberMale as float)::numeric, 6) from(select count(*) numberFemale from userprofile,ratings where userprofile.userid=ratings.userid and userprofile.gender='f') as T1,(select count(*) numberMale from userprofile,ratings where userprofile.userid=ratings.userid and userprofile.gender='m') as T2;
+
+------------------------18----------------
+select userid,did from ratings,movieDirectors where ratings.mid=movieDirectors.mid and rating=(select max(rating) from ratings R2,movieDirectors D2 where R2.mid=D2.mid and userid=R2.userid);
+
+---------------------19------------------------
+select userid,did from ratings,movieDirectors where ratings.mid=movieDirectors.mid group by movieDirectors.did,ratings.userid having avg(rating)>=all(select distinct avg(rating) from ratings R2,movieDirectors D2 where R2.mid=D2.mid and userid=R2.userid group by D2.did);
+
+----------------------20---------------------------------
+with T as (select genre,avg(rating) avgRating,count(*) timesRated from genre,ratings where genre.mid=ratings.mid group by genre order by avgRating) select genre , avgRating , timesRated,timesRated/ total*100 percentage from T , (select sum(timesRated) total from T) as T1;
+
+
+
+--------------------21 ------------
+with avg_actor_rating as (select pid actor_id,avg(T1.avgRating)::numeric(16,6) avg_rating from (select distinct pid,mid from casts) as C,(select mid,avg(rating) avgRating from ratings where userid in (select userid from userProfile where country ='India') group by mid having count(*)>=5 ) as T1 where C.mid=T1.mid group by pid ) select  fname from actor inner join (select * from avg_actor_rating where avg_rating=(select max(avg_rating) from avg_actor_rating)) as T2 on actor.id=T2.actor_id order by fname;
+--------------22-----------------
+
+select distinct T2.userid from ratings T2  inner join (select userid,max(rating) max_rating from ratings group by userid ) as T1 on T2.userid=T1.userid and T2.rating=max_rating and T2.mid in (select mid from ratings where userid ='user_000085' and rating= (select max(rating) from ratings where userid='user_000085')) order by T2.userid;
+
+-----------23------------------
+
+select date_part('year',T2.year),avg(T1.avg_rating)::numeric(16,6) yearly_avg from movie T2 inner join (select mid,avg(rating) avg_rating from ratings group by mid) as T1 on T2.id= T1.mid group by T2.year order by yearly_avg;
+
+------------24------------------
+select fname,T2.no_of_movies from (select did,count(*) no_of_movies from moviedirectors inner join (select distinct mid from casts where role = 'Himself' or role = 'Themselves') as T1	on moviedirectors.mid=T1.mid group by did )as  T2 , directors where directors.id=T2.did	and T2.no_of_movies>=all (select count(*) from	moviedirectors 	inner join (select distinct mid from casts where role = 'Himself' or role = 'Themselves') as T4	on moviedirectors.mid=T4.mid group by did);
+
+----------------25 ------------------------
+
+select userid from (select userid,count(*) c1 from ratings group by userid ) as R1 where (select count(*) from (select userid,count(*) c2 from ratings group by userid ) as R2  where R1.c1<R2.c2)<10 order by c1 desc,userid asc;
+
+
+------------26------------------------
+with country_movie_rating as (  select country,mid,avg(rating) avg_rating  from ratings,(select  userid,country from userprofile) as T1   where ratings.userid=T1.userid  group by country,mid  ) select country,name from movie inner join (select country,mid from country_movie_rating C1 where avg_rating=	(Select max(avg_rating) from country_movie_rating C2 where C2.country=C1.country)) as T1 on movie.id=T1.mid order by country,name;
+
+-------------------------27 ----------------------
+select mid from (select mid,count (*) as count1 from (select T.country, T.mid from ( select T.country, T.mid,row_number() over(partition by T.country order by T.country desc) as rn from (select query26Temp1.country,mid from (select country,mid,avg(rating) as rating2 from ratings,userProfile where ratings.userid =userProfile.userid group by country,mid ) as query26Temp1,(select country,max(rating1) as rating3 from (select country,mid,avg(rating) as rating1 from ratings,userProfile where ratings.userid =userProfile.userid group by country,mid) as query26Temp2 group by country) as query26Temp3 where query26Temp1.country = query26Temp3.country and query26Temp1.rating2 = query26Temp3.rating3 order by country,rating2) as T ) as T where T.rn <= 5 ) as query26Temp4 group by mid order by mid) as query26Temp5, (select max(count1) as count2 from (select mid,count (*) as count1 from (select T.country, T.mid from ( select T.country, T.mid,row_number() over(partition by T.country order by T.country desc) as rn from (select query26Temp11.country,mid from (select country,mid,avg(rating) as rating2 from ratings,userProfile where ratings.userid =userProfile.userid group by country,mid ) as query26Temp11,(select country,max(rating1) as rating3 from (select country,mid,avg(rating) as rating1 from ratings,userProfile where ratings.userid =userProfile.userid group by country,mid) as query26Temp21 group by country) as query26Temp31 where query26Temp11.country = query26Temp31.country and query26Temp11.rating2 = query26Temp31.rating3 order by country,rating2) as T ) as T where T.rn <= 5 ) as query26Temp41 group by mid) as query26Temp51) as query26Temp61 where query26Temp5.count1 = query26Temp61.count2 order by mid;
+		
+	
+
+---------------28----------------------
+
+
+select name ,count(*) c from (	select name,userid from movie ,(select userid,mid,rating from userprofile,ratings where	ratings.userid=userprofile.userid and rating in	(select distinct avg(rating) msal from 	userprofile U,ratings R R.userid=U.userid and R.userid=userid  by avg(rating)	limit 5	)as T where movie.id=T.mid ) as TFinal group by name order by c limit 10 ;
+------------------------29-----------------
+
+select fname,avg_rating::numeric(16,6) from (select pid,avg(rating) avg_rating	from ratings, distinct T1.pid,mid from ,(select pid from (select distinct pid,mid from casts,movie where casts.mid=movie.id and date_part('year',year) in ('1990','1991','1992','1993','1994','1995')) as C1
+			 group by pid having count(*) =
+			  (select max(c) from (select count(*) c from (select distinct pid,mid from casts,movie where casts.mid=movie.id and date_part('year',year) in ('1990','1991','1992','1993','1994','1995')) as C2 group by pid) as T1 ) 
+			 ) as T1,
+			 movie
+
+		 where casts.pid=T1.pid
+		 and casts.mid=movie.id
+		 and date_part('year',year) in ('1990','1991','1992','1993','1994','1995')
+	) as T2	 
+
+	where ratings.mid=T2.mid
+	group by pid
+) as T3,
+actor 
+where actor.id=T3.pid
+
+ 
+ 
+
+	
+ 
+
+-------------------30------------------------
+
+with director_actor as
+(
+	select did dir_id,C.pid actor_id,count(*) times
+	from
+		movieDirectors,			
+		(Select distinct pid,mid from casts) as C
+
+	where
+		movieDirectors.mid=C.mid		
+
+	group by dir_id,actor_id
+)
+
+
+select D.fname,A.fname 
+from 
+	actor A,director_actor D1,directors D
+where
+	A.id=D1.actor_id
+	and
+	D1.dir_id=D.id
+	and
+	times=(
+		Select max(times)
+		from director_actor D2
+		where D1.dir_id=D2.dir_id
+	      )
+order by D.fname,A.fname;
+
+
